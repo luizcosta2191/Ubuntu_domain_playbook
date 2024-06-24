@@ -1,0 +1,44 @@
+---
+- name: Configure krb5.conf
+  template:
+    src: krb5.conf.j2
+    dest: /etc/krb5.conf
+  tags:
+    - configure
+
+- name: Execute pam-auth-update
+  command: pam-auth-update --enable mkhomedir
+  tags:
+    - configure
+
+- name: Join domain
+  command: >
+    realm join {{ domain_upper }} -U {{ admin_user }}@{{ domain_upper }}
+    --computer-ou='OU=Computers,OU=CORP,DC=corp,DC={{ domain_component }},DC=com'
+    --verbose
+  args:
+    stdin: "{{ admin_pass }}\n"
+  tags:
+    - join_domain
+
+- name: Configure sssd.conf
+  template:
+    src: sssd.conf.j2
+    dest: /etc/sssd/sssd.conf
+  tags:
+    - configure
+
+- name: Set permissions for sssd.conf
+  file:
+    path: /etc/sssd/sssd.conf
+    owner: root
+    group: root
+    mode: '0600'
+  tags:
+    - configure
+
+- name: Notify handler to restart sssd
+  meta: flush_handlers
+
+- name: Reboot machine
+  reboot:

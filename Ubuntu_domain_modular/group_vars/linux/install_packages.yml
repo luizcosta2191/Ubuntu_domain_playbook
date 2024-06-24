@@ -1,0 +1,6 @@
+packages:
+  - sssd-ad
+  - sssd-tools
+  - realmd
+  - adcli
+  - krb5-user

@@ -1,0 +1,12 @@
+---
+- name: Change machine hostname
+  ansible.builtin.hostname:
+    name: "{{ hostname }}"
+
+- name: Execute hostnamectl command
+  command: hostnamectl status
+  register: file_contents
+
+- name: Verify if hostname was changed
+  ansible.builtin.debug:
+    var: file_contents.stdout_lines

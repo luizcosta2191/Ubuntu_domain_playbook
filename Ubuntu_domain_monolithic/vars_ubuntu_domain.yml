@@ -1,0 +1,8 @@
+hostname: "hostname"
+user_local: "local machine user"
+password: "local machine user's password"
+domain_upper: "uppercase domain address"
+domain_lower: "lowercase domain address"
+admin_user: "Active Directory admin user"
+admin_pass: "Active Directory admin password"
+domain_component: "domain component"

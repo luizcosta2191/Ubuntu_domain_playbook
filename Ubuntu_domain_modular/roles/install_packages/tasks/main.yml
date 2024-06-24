@@ -1,0 +1,11 @@
+---
+- name: Update and install packages
+  apt:
+    update_cache: yes
+    name: "{{ packages }}"
+    state: present
+  tags:
+    - install
+    - update
+  register: install_packages_result
+

@@ -1,0 +1,6 @@
+---
+- name: Add local user
+  user:
+    name: "{{ user_local }}"
+    password: "{{ password | password_hash('sha512') }}"
+    shell: /bin/bash

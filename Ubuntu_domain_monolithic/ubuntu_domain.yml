@@ -1,0 +1,95 @@
+---
+- name: Join Ubuntu to domain
+  hosts: # Linux Host 
+  become: yes
+
+  vars_files:
+    - vars_ubuntu_domain.yml  
+  
+  tasks:
+
+    - name: Change machine hostname
+      ansible.builtin.hostname:
+        name: "{{ hostname }}"
+        
+    - name: Execute hostnamectl command
+      command: hostnamectl status
+      register: file_contents
+      
+    - name: Verify if hostname was changed
+      ansible.builtin.debug:
+        var: file_contents.stdout_lines
+    
+    - name: Add local user
+      user:
+        name: "{{ user_local }}"
+        password: "{{ password | password_hash('sha512') }}"
+        shell: /bin/bash  
+
+    - name: Update and install packages
+      apt:
+        update_cache: yes
+        name:
+          - sssd-ad
+          - sssd-tools
+          - realmd
+          - adcli
+          - krb5-user
+        state: present
+      tags:
+        - install
+        - update
+    
+    - name: Configure krb5.conf
+      lineinfile:
+        path: /etc/krb5.conf
+        line: |
+          [libdefaults] 
+          udp_preference_limit = 0 
+          default_realm = "{{ domain_upper }}"  
+          rdns = false
+      tags:
+        - configure
+    
+    - name: Execute pam-auth-update
+      command: pam-auth-update --enable mkhomedir
+      tags:
+        - configure
+
+    - name: Join domain
+      command: >
+        realm join {{ domain_upper }} -U {{ admin_user }}@{{ domain_upper }}
+        --computer-ou='OU=Computers,OU=CORP,DC=corp,DC={{ domain_component }},DC=com'
+        --verbose
+      args:
+        stdin: "{{ admin_pass }}\n"
+      tags:
+        - join_domain
+        
+    - name: Configure sssd.conf
+      blockinfile:
+        path: /etc/sssd/sssd.conf
+        block: |
+          [domain/"{{ domain_lower }}"]
+          default_shell = /bin/bash
+          krb5_store_password_if_offline = True
+          cache_credentials = True
+          krb5_realm = "{{ domain_upper }}"
+          realmd_tags = manages-system joined-with-adcli
+          id_provider = ad
+          fallback_homedir = /home/%u@%d
+          ad_domain = "{{ domain_lower }}"
+          use_fully_qualified_names = False
+          ldap_id_mapping = True
+          access_provider = ad
+          ad_gpo_ignore_unreadable = True
+      tags:
+        - configure
+    
+    - name: Restart sssd service
+      service:
+        name: sssd.service
+        state: restarted
+    
+    - name: Reboot machine
+      reboot:
