@@ -67,9 +67,9 @@
         - join_domain
         
     - name: Configure sssd.conf
-      blockinfile:
+      lineinfile:
         path: /etc/sssd/sssd.conf
-        block: |
+        line: |
           [domain/"{{ domain_lower }}"]
           default_shell = /bin/bash
           krb5_store_password_if_offline = True
